@@ -1,0 +1,1 @@
+ALTER TABLE `matches` ADD `analysis_started_at` integer;
