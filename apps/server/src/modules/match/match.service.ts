@@ -122,6 +122,7 @@ export async function getMatchDetail(db: Db, matchId: number): Promise<MatchDeta
     imp: mp.imp,
     name: player?.name ?? null,
     avatar: player?.avatar ?? null,
+    steamId: player?.steamId ?? null,
     position: mp.position,
     level: mp.level,
     gold: mp.gold,

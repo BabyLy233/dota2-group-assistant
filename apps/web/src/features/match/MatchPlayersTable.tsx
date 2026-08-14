@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import type { MatchPlayerDetail } from '@dota/shared'
 import { useConstants } from '@/lib/use-constants'
 import { formatNumber } from '@/lib/format'
@@ -68,9 +69,20 @@ export function MatchPlayersTable({ players }: { players: MatchPlayerDetail[] })
                       {p.avatar ? <AvatarImage src={p.avatar} alt='' /> : null}
                       <AvatarFallback>?</AvatarFallback>
                     </Avatar>
-                    <span className='max-w-40 truncate'>
-                      {p.name ?? `玩家 ${p.steamAccountId}`}
-                    </span>
+                    {p.steamId ? (
+                      <Link
+                        to='/players/$steamId'
+                        params={{ steamId: p.steamId }}
+                        title={`查看玩家 ${p.steamId}`}
+                        className='max-w-40 truncate text-primary transition hover:underline'
+                      >
+                        {p.name ?? `玩家 ${p.steamAccountId}`}
+                      </Link>
+                    ) : (
+                      <span className='max-w-40 truncate'>
+                        {p.name ?? `玩家 ${p.steamAccountId}`}
+                      </span>
+                    )}
                   </span>
                 </TableCell>
                 <TableCell className='tabular-nums text-muted-foreground'>

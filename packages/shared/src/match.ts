@@ -38,6 +38,7 @@ export interface MatchPlayerSummary {
 export interface MatchPlayerDetail extends MatchPlayerSummary {
   name: string | null
   avatar: string | null
+  steamId: string | null
   position: string | null
   level: number | null
   gold: number | null

@@ -215,6 +215,7 @@ function sampleDetail(): MatchDetail {
         imp: 13,
         name: '萧静玉',
         avatar: null,
+        steamId: '76561198139459503',
         position: 'POSITION_3',
         level: 21,
         gold: 1651,
