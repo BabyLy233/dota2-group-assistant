@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm'
 import type { MatchAnalysis, MatchDetail, MatchPlayerDetail } from '@dota/shared'
 import { HERO_NAMES_ZH } from '@dota/shared'
 import type { Db } from '../../db'
+import type { AppLogger } from '../../logger'
 import { matches } from '../../db/schema'
 import type { StratzClient } from '../stratz'
 import { getMatchDetail } from '../match/match.service'
@@ -266,22 +267,33 @@ export type AnalyzeStreamEvent =
   | { kind: 'done'; analysis: MatchAnalysis; cached: boolean }
 
 export async function* streamAnalyze(
-  deps: { db: Db; stratz: StratzClient },
+  deps: { db: Db; stratz: StratzClient; logger?: AppLogger },
   matchId: number,
   config: AiConfig,
   type: AnalysisType = 'full',
   force = false,
 ): AsyncGenerator<AnalyzeStreamEvent> {
+  const operationStartedAt = performance.now()
+  deps.logger?.info({ matchId, type, force }, 'ai analysis started')
+
   const row = await deps.db.query.matches.findFirst({
     where: eq(matches.matchId, matchId),
   })
-  if (!row) throw new AiMatchNotFoundError(matchId)
+  if (!row) {
+    deps.logger?.warn({ matchId, type }, 'ai analysis requested for missing match')
+    throw new AiMatchNotFoundError(matchId)
+  }
   if (row.status !== 'COMPLETED') {
+    deps.logger?.warn(
+      { matchId, type, status: row.status },
+      'ai analysis requested for unparsed match',
+    )
     throw new AiMatchNotReadyError(matchId, row.status)
   }
 
   const cached = type === 'brief' ? row.analysisBriefJson : row.analysisJson
   if (!force && cached) {
+    deps.logger?.info({ matchId, type }, 'ai analysis served from cache')
     yield { kind: 'done', analysis: cached, cached: true }
     return
   }
@@ -293,6 +305,7 @@ export async function* streamAnalyze(
   if (status === 'PROCESSING') {
     const stuck = startedAt === 0 || Date.now() - startedAt > PROCESSING_TTL_MS
     if (!force && !stuck) {
+      deps.logger?.warn({ matchId, type }, 'ai analysis already in progress')
       throw new AiInProgressError()
     }
   }
@@ -349,12 +362,33 @@ export async function* streamAnalyze(
       })
       .where(eq(matches.matchId, matchId))
 
+    deps.logger?.info(
+      {
+        matchId,
+        type,
+        model: config.model,
+        characters: analysis.text.length,
+        durationMs: Math.round(performance.now() - operationStartedAt),
+      },
+      'ai analysis completed',
+    )
+
     yield { kind: 'done', analysis, cached: false }
   } catch (err) {
     await deps.db
       .update(matches)
       .set({ [statusCol]: 'FAILED', [startedAtCol]: null })
       .where(eq(matches.matchId, matchId))
+    deps.logger?.error(
+      {
+        err,
+        matchId,
+        type,
+        model: config.model,
+        durationMs: Math.round(performance.now() - operationStartedAt),
+      },
+      'ai analysis failed',
+    )
     throw err
   }
 }

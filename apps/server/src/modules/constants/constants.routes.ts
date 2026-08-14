@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
+import type { AppLogger } from '../../logger'
 import type { StratzClient } from '../stratz'
 
 export interface ConstantsDeps {
   stratz: StratzClient
+  logger?: AppLogger
 }
 
 export function constantsRoutes(deps: ConstantsDeps): Hono {
@@ -22,6 +24,7 @@ export function constantsRoutes(deps: ConstantsDeps): Hono {
         })),
       })
     } catch (err) {
+      deps.logger?.error({ err }, 'constants fetch failed')
       return c.json(
         {
           error: 'constants_fetch_failed',

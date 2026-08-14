@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Env } from '../../config/env'
 import type { Db } from '../../db'
+import type { AppLogger } from '../../logger'
 import type { StratzClient } from '../stratz'
 import {
   getPlayer,
@@ -14,6 +15,7 @@ export interface ModuleDeps {
   db: Db
   env: Env
   stratz: StratzClient
+  logger?: AppLogger
 }
 
 const STEAM_ID_PATTERN = /^\d{17}$/
@@ -57,7 +59,10 @@ export function playerRoutes(deps: ModuleDeps): Hono {
       return c.json({ error: 'invalid_steam_id' }, 400)
     }
     try {
-      const player = await syncPlayer({ db: deps.db, stratz: deps.stratz }, steamId)
+      const player = await syncPlayer(
+        { db: deps.db, stratz: deps.stratz, logger: deps.logger },
+        steamId,
+      )
       return c.json(player)
     } catch (err) {
       return c.json(

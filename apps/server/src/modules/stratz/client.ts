@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import type { AppLogger } from '../../logger'
 import { steamIdToAccountId } from './steam'
 import { RateLimiter, type RateLimitConfig } from './rate-limiter'
 import type {
@@ -260,6 +261,7 @@ export class StratzRateLimitError extends Error {
 
 export interface StratzClientOptions {
   apiKey?: string
+  logger?: AppLogger
   maxRetries?: number
   retryDelayMs?: number
   rateLimits?: RateLimitConfig
@@ -287,6 +289,7 @@ export interface StratzQuota {
 export class StratzClient {
   private readonly endpoint = STRATZ_ENDPOINT
   private readonly apiKey?: string
+  private readonly logger?: AppLogger
   private readonly maxRetries: number
   private readonly retryDelayMs: number
   private readonly limiter: RateLimiter
@@ -299,6 +302,7 @@ export class StratzClient {
 
   constructor(options: StratzClientOptions) {
     this.apiKey = options.apiKey
+    this.logger = options.logger
     this.maxRetries = options.maxRetries ?? 3
     this.retryDelayMs = options.retryDelayMs ?? 1000
     this.limiter = new RateLimiter(
@@ -378,16 +382,41 @@ export class StratzClient {
 
   private async query<T>(queryText: string, variables: Record<string, unknown>): Promise<T> {
     let delayMs = this.retryDelayMs
+    const operation = this.queryOperation(queryText)
+    const startedAt = performance.now()
 
     for (let attempt = 0; ; attempt++) {
       try {
+        this.logger?.debug({ operation, variables, attempt }, 'stratz request started')
         const res = await this.httpPost(JSON.stringify({ query: queryText, variables }))
 
         if (res.status === 429) {
+          const retryAfterMs = (res.retryAfter ?? delayMs / 1000) * 1000
           if (attempt >= this.maxRetries) {
-            throw new StratzRateLimitError()
+            const error = new StratzRateLimitError()
+            this.logger?.error(
+              {
+                err: error,
+                operation,
+                variables,
+                attempts: attempt + 1,
+                durationMs: Math.round(performance.now() - startedAt),
+              },
+              'stratz rate limit exceeded',
+            )
+            throw error
           }
-          await sleep((res.retryAfter ?? delayMs / 1000) * 1000)
+          this.logger?.warn(
+            {
+              operation,
+              variables,
+              attempt,
+              retryAfterMs,
+              remainingRetries: this.maxRetries - attempt,
+            },
+            'stratz rate limit hit, retrying',
+          )
+          await sleep(retryAfterMs)
           delayMs *= 2
           continue
         }
@@ -406,21 +435,62 @@ export class StratzClient {
         }
 
         if (body.errors?.length) {
-          throw new StratzApiError(body.errors[0]?.message ?? 'Unknown GraphQL error')
+          const message = body.errors[0]?.message ?? 'Unknown GraphQL error'
+          this.logger?.warn(
+            { operation, variables, message, status: res.status },
+            'stratz returned GraphQL errors',
+          )
+          throw new StratzApiError(message)
         }
 
+        this.logger?.info(
+          {
+            operation,
+            variables,
+            attempt: attempt + 1,
+            status: res.status,
+            durationMs: Math.round(performance.now() - startedAt),
+          },
+          'stratz request completed',
+        )
         return body.data as T
       } catch (err) {
         if (err instanceof StratzApiError || err instanceof StratzRateLimitError) {
           throw err
         }
         if (attempt >= this.maxRetries) {
+          this.logger?.error(
+            {
+              err,
+              operation,
+              variables,
+              attempts: attempt + 1,
+              durationMs: Math.round(performance.now() - startedAt),
+            },
+            'stratz request failed',
+          )
           throw err
         }
+        this.logger?.warn(
+          {
+            err,
+            operation,
+            variables,
+            attempt,
+            retryDelayMs: delayMs,
+            remainingRetries: this.maxRetries - attempt,
+          },
+          'stratz request failed, retrying',
+        )
         await sleep(delayMs)
         delayMs *= 2
       }
     }
+  }
+
+  private queryOperation(queryText: string): string {
+    const match = /^\s*(?:query|mutation)\s+(\w+)/m.exec(queryText)
+    return match?.[1] ?? 'anonymous'
   }
 
   private async httpPost(bodyText: string): Promise<{

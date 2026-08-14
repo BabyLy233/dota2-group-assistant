@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { Db } from '../../db'
+import type { AppLogger } from '../../logger'
 import type { StratzClient } from '../stratz'
 import {
   AiInProgressError,
@@ -14,6 +15,7 @@ import {
 export interface AiModuleDeps {
   db: Db
   stratz: StratzClient
+  logger?: AppLogger
 }
 
 const encoder = new TextEncoder()

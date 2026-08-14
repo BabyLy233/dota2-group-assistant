@@ -1,6 +1,7 @@
 import { count, desc, eq } from 'drizzle-orm'
 import type { MatchListItem, MatchListResponse, Player } from '@dota/shared'
 import type { Db } from '../../db'
+import type { AppLogger } from '../../logger'
 import { matchPlayers, matches, players } from '../../db/schema'
 import type { StratzClient } from '../stratz'
 import { steamIdToAccountId } from '../stratz'
@@ -9,59 +10,88 @@ import { mapMatchPlayerSummaryRow, mapMatchSummaryBase } from '../match/mapper'
 export interface PlayerServiceDeps {
   db: Db
   stratz: StratzClient
+  logger?: AppLogger
 }
 
 export async function syncPlayer(
-  { db, stratz }: PlayerServiceDeps,
+  { db, stratz, logger }: PlayerServiceDeps,
   steamId: string,
 ): Promise<Player> {
-  const accountId = steamIdToAccountId(steamId)
-  const player = await stratz.getPlayer(steamId)
-  await db
-    .insert(players)
-    .values({
-      steamAccountId: accountId,
-      steamId,
-      name: player.name,
-      avatar: player.avatar,
-      profileUrl: player.profileUrl,
-    })
-    .onConflictDoUpdate({
-      target: players.steamAccountId,
-      set: {
+  const startedAt = performance.now()
+  let accountId: number | undefined
+
+  try {
+    accountId = steamIdToAccountId(steamId)
+    logger?.info({ steamId, accountId }, 'player sync started')
+
+    const player = await stratz.getPlayer(steamId)
+    await db
+      .insert(players)
+      .values({
+        steamAccountId: accountId,
         steamId,
         name: player.name,
         avatar: player.avatar,
         profileUrl: player.profileUrl,
-        updatedAt: new Date(),
-      },
-    })
-
-  const matchList = await stratz.getPlayerMatches(steamId, { take: 100 })
-
-  for (const m of matchList) {
-    const summary = mapMatchSummaryBase(m)
-    await db
-      .insert(matches)
-      .values({ ...summary, status: 'PENDING' })
+      })
       .onConflictDoUpdate({
-        target: matches.matchId,
-        set: summary,
+        target: players.steamAccountId,
+        set: {
+          steamId,
+          name: player.name,
+          avatar: player.avatar,
+          profileUrl: player.profileUrl,
+          updatedAt: new Date(),
+        },
       })
 
-    for (const p of m.players ?? []) {
-      const row = mapMatchPlayerSummaryRow(m.id, p)
-      await db
-        .insert(matchPlayers)
-        .values(row)
-        .onConflictDoUpdate({
-          target: [matchPlayers.matchId, matchPlayers.steamAccountId],
-          set: { ...row, matchId: undefined, steamAccountId: undefined },
-        })
-    }
-  }
+    const matchList = await stratz.getPlayerMatches(steamId, { take: 100 })
 
-  return (await getPlayer(db, steamId))!
+    for (const m of matchList) {
+      const summary = mapMatchSummaryBase(m)
+      await db
+        .insert(matches)
+        .values({ ...summary, status: 'PENDING' })
+        .onConflictDoUpdate({
+          target: matches.matchId,
+          set: summary,
+        })
+
+      for (const p of m.players ?? []) {
+        const row = mapMatchPlayerSummaryRow(m.id, p)
+        await db
+          .insert(matchPlayers)
+          .values(row)
+          .onConflictDoUpdate({
+            target: [matchPlayers.matchId, matchPlayers.steamAccountId],
+            set: { ...row, matchId: undefined, steamAccountId: undefined },
+          })
+      }
+    }
+
+    const result = (await getPlayer(db, steamId))!
+    logger?.info(
+      {
+        steamId,
+        accountId,
+        matchCount: matchList.length,
+        durationMs: Math.round(performance.now() - startedAt),
+      },
+      'player sync completed',
+    )
+    return result
+  } catch (err) {
+    logger?.error(
+      {
+        err,
+        steamId,
+        accountId,
+        durationMs: Math.round(performance.now() - startedAt),
+      },
+      'player sync failed',
+    )
+    throw err
+  }
 }
 
 export async function getPlayer(db: Db, steamId: string): Promise<Player | null> {

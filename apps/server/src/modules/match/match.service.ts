@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { MatchDetail, MatchPlayerDetail } from '@dota/shared'
 import type { Db } from '../../db'
+import type { AppLogger } from '../../logger'
 import { matchPlayers, matches, players } from '../../db/schema'
 import type { StratzClient } from '../stratz'
 import { accountIdToSteamId } from '../stratz'
@@ -9,10 +10,11 @@ import { mapMatchPlayerRow, mapMatchSummary } from './mapper'
 export interface MatchServiceDeps {
   db: Db
   stratz: StratzClient
+  logger?: AppLogger
 }
 
 export async function syncMatch(
-  { db, stratz }: MatchServiceDeps,
+  { db, stratz, logger }: MatchServiceDeps,
   matchId: number,
 ): Promise<MatchDetail> {
   const existing = await db.query.matches.findFirst({
@@ -22,6 +24,8 @@ export async function syncMatch(
     await db.insert(matches).values({ matchId, status: 'PENDING' })
   }
   const attempts = (existing?.fetchAttempts ?? 0) + 1
+  const startedAt = performance.now()
+  logger?.info({ matchId, attempts }, 'match sync started')
 
   try {
     const m = await stratz.getMatch(matchId)
@@ -74,7 +78,18 @@ export async function syncMatch(
       }
     }
 
-    return (await getMatchDetail(db, matchId))!
+    const result = (await getMatchDetail(db, matchId))!
+    logger?.info(
+      {
+        matchId,
+        attempts,
+        parsed: isParsed,
+        playerCount: m.players?.length ?? 0,
+        durationMs: Math.round(performance.now() - startedAt),
+      },
+      'match sync completed',
+    )
+    return result
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     await db
@@ -86,6 +101,15 @@ export async function syncMatch(
         fetchAttempts: attempts,
       })
       .where(eq(matches.matchId, matchId))
+    logger?.error(
+      {
+        err,
+        matchId,
+        attempts,
+        durationMs: Math.round(performance.now() - startedAt),
+      },
+      'match sync failed',
+    )
     throw err
   }
 }

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Env } from '../../config/env'
 import type { Db } from '../../db'
+import type { AppLogger } from '../../logger'
 import type { StratzClient } from '../stratz'
 import { getMatchDetail, syncMatch } from './match.service'
 
@@ -8,6 +9,7 @@ export interface ModuleDeps {
   db: Db
   env: Env
   stratz: StratzClient
+  logger?: AppLogger
 }
 
 const MATCH_ID_PATTERN = /^\d{1,10}$/
@@ -33,7 +35,10 @@ export function matchRoutes(deps: ModuleDeps): Hono {
       return c.json({ error: 'invalid_match_id' }, 400)
     }
     try {
-      const detail = await syncMatch({ db: deps.db, stratz: deps.stratz }, matchId)
+      const detail = await syncMatch(
+        { db: deps.db, stratz: deps.stratz, logger: deps.logger },
+        matchId,
+      )
       return c.json(detail)
     } catch (err) {
       return c.json(
