@@ -248,9 +248,12 @@ describe('buildPrompt', () => {
   ])
   const items = new Map([[116, 'Black King Bar']])
 
-  it('full prompt: forbids openings, uses Chinese hero names, contains data sections', () => {
+  it('full prompt: enforces scannable markdown, uses Chinese hero names, contains data sections', () => {
     const p = buildPrompt('full', sampleDetail(), heroes, items)
-    expect(p).toContain('严禁任何开场白')
+    expect(p).toContain('## 一句话结论')
+    expect(p).toContain('## 选手表现')
+    expect(p).toContain('| 位置 | 玩家 | 英雄 | K/D/A | GPM/XPM | IMP | 一句话点评 |')
+    expect(p).toContain('不要写开场白')
     expect(p).toContain('祈求者')
     expect(p).toContain('敌法师')
     expect(p).toContain('黑皇杖'.length > 0 ? 'Black King Bar' : '黑皇杖')
@@ -262,11 +265,16 @@ describe('buildPrompt', () => {
   it('brief prompt: table format, 甩锅与邀功, no detailed analysis sections', () => {
     const p = buildPrompt('brief', sampleDetail(), heroes, items)
     expect(p).toContain('QQ 群简报')
+    expect(p).toContain('**一句话总评**')
+    expect(p).toContain('**选手点评**')
     expect(p).toContain('位置 | 玩家 | 英雄 | 一句点评')
     expect(p).toContain('甩锅与邀功')
+    expect(p).toContain('150~250 字')
     expect(p).toContain('背锅位')
     expect(p).toContain('Carry 位')
     expect(p).toContain('不要写阵容分析')
     expect(p).toContain('不要任何开场白')
+    expect(p).toContain('【玩家数据】')
+    expect(p).not.toContain('## 一句话结论')
   })
 })

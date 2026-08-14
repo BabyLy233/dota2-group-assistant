@@ -88,21 +88,12 @@ function heroName(heroId: number | null | undefined, heroes: Map<number, string>
 const ZH_ONLY_SYSTEM =
   '所有输出内容必须使用简体中文，不要夹杂英文（玩家名称、英雄中文名、必要的数值单位缩写如 GPM/XPM/IMP 除外）。'
 
-function buildFullPrompt(
+function buildMatchData(
   d: MatchDetail,
   heroes: Map<number, string>,
   items: Map<number, string>,
 ): string {
   const l: string[] = []
-  l.push(
-    '你是一名资深的 Dota 2 数据分析师。根据下面提供的比赛数据，写一份详细的中文战报分析（Markdown 格式），' +
-      '包括：1) 阵容分析与 BP 评价 2) 对线期表现 3) 比赛节奏与转折点 4) 各位置选手表现点评 5) 胜负关键原因 6) 给失败方的改进建议。',
-  )
-  l.push(ZH_ONLY_SYSTEM)
-  l.push(
-    '直接输出分析正文，严禁任何开场白、客套语、自我介绍或结束语（如"好的，""以下是""希望有帮助"等）。',
-  )
-
   const winner =
     d.winningTeam == null ? '未知' : d.winningTeam === 0 ? 'Radiant（天辉）' : 'Dire（夜魇）'
   l.push(
@@ -190,9 +181,41 @@ function buildFullPrompt(
     }
   }
 
+  return l.join('\n')
+}
+
+function buildFullPrompt(
+  d: MatchDetail,
+  heroes: Map<number, string>,
+  items: Map<number, string>,
+): string {
+  const l: string[] = []
   l.push(
-    '请输出完整的分析报告，要求：结构清晰、数据引用准确、语言精炼有洞察力，不要复述原始数据表。',
+    '你是一名资深的 Dota 2 数据分析师。根据下面提供的比赛数据，写一份详细但精炼的中文战报（Markdown 格式），适合在网页中直接阅读。',
   )
+  l.push(ZH_ONLY_SYSTEM)
+  l.push(
+    '输出必须使用以下结构，标题顺序不要改：\n' +
+      '# Dota 2 战报：天辉 26 - 9 夜魇（标题按实际比分写）\n' +
+      '## 一句话结论\n' +
+      '## 阵容与 BP\n' +
+      '## 对线期\n' +
+      '## 比赛节奏与转折点\n' +
+      '## 选手表现\n' +
+      '| 位置 | 玩家 | 英雄 | K/D/A | GPM/XPM | IMP | 一句话点评 |\n' +
+      '## 胜负关键\n' +
+      '## 失败方改进建议',
+  )
+  l.push(
+    '排版要求：\n' +
+      '- 一级标题只用于战报标题，二级标题只用于上述小节；正文优先用短段落、列表和表格，不要写大段散文。\n' +
+      '- 「一句话结论」必须用一句话直接概括胜负走向。\n' +
+      '- 「选手表现」输出 10 行 Markdown 表格，列为「位置 | 玩家 | 英雄 | K/D/A | GPM/XPM | IMP | 一句话点评」，每行点评 8~15 字并给出明确评价。\n' +
+      '- 用 **加粗** 突出胜负关键、转折点和最有价值/最拉胯的数据，不要通篇加粗。\n' +
+      '- 全文控制在 1000 字左右，信息密度高；不要复述原始数据表，不要写开场白、客套语、自我介绍或结束语。',
+  )
+  l.push(buildMatchData(d, heroes, items))
+  l.push('请直接按上面的结构和排版要求输出完整战报，不要输出“以下是分析”之类的前缀。')
   return l.join('\n')
 }
 
@@ -201,18 +224,27 @@ function buildBriefPrompt(
   heroes: Map<number, string>,
   items: Map<number, string>,
 ): string {
-  const full = buildFullPrompt(d, heroes, items)
-  return (
-    full +
-    '\n\n---\n\n' +
-    '现在请写一份「QQ 群简报」，只包含以下两部分，总字数 250~350 字：\n' +
-    '一、各位置选手表现点评表：Markdown 表格，10 行（天辉 5 人 + 夜魇 5 人），列格式为「位置 | 玩家 | 英雄 | 一句点评」。每行点评必须控制在 15 字以内，犀利毒舌、点到为止，全中文。\n' +
-    '二、《甩锅与邀功》两句话：\n' +
-    '  - 背锅位：点名玩家 + 一句数据依据；\n' +
-    '  - Carry 位：点名玩家 + 一句数据依据。\n' +
-    '严禁：不要写比赛过程总结、不要写阵容分析、不要写 BP 评价、不要写改进建议、不要任何开场白或结尾客套话——直接输出表格和甩锅邀功两部分即可。\n' +
-    ZH_ONLY_SYSTEM
-  )
+  return [
+    '你是一名资深的 Dota 2 数据分析师。根据下面提供的比赛数据，写一份适合直接发 QQ 群的犀利中文简报（Markdown 格式）。',
+    ZH_ONLY_SYSTEM,
+    '比赛数据如下：',
+    buildMatchData(d, heroes, items),
+    '',
+    '---',
+    '',
+    '现在写「QQ 群简报」，直接输出以下三个部分，总字数 150~250 字：',
+    '**一句话总评**',
+    '一句话点出本局结果和最重要反差，20~35 字。',
+    '**选手点评**',
+    '| 位置 | 玩家 | 英雄 | 一句点评 |',
+    '10 行（天辉 5 人 + 夜魇 5 人），每行点评 10~15 字，必须包含关键数据或表现结论。',
+    '**甩锅与邀功**',
+    '- **背锅位**：玩家 + 数据依据；',
+    '- **Carry 位**：玩家 + 数据依据。',
+    '排版要求：',
+    '- 不要输出代码块，不要写比赛过程总结、不要写阵容分析、不要写 BP 评价、不要写改进建议、不要任何开场白或结尾客套话。',
+    '- 点评要犀利毒舌、点到为止，全中文；玩家名和英雄名除外。',
+  ].join('\n')
 }
 
 export function buildPrompt(
