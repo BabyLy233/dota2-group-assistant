@@ -16,7 +16,6 @@ interface KillRow {
 export function KillsTimeline({ players }: { players: MatchPlayerDetail[] }) {
   const { data: constants } = useConstants()
 
-  const heroBySlot = new Map<number, number>()
   const playerByHero = new Map<number, number>()
   for (const p of players) {
     if (p.heroId != null) playerByHero.set(p.heroId, p.playerSlot ?? 0)

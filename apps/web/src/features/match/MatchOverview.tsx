@@ -5,7 +5,7 @@ import { formatDateTime, formatDuration } from '@/lib/format'
 import { MatchStatusBadge } from './MatchStatusBadge'
 import { TimelineChart } from './TimelineChart'
 import { Button } from '@/components/ui/button'
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
 interface MatchOverviewProps {

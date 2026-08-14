@@ -12,7 +12,7 @@ import {
   useFavoritePlayer,
 } from '@/features/player/use-player'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Pagination,
   PaginationContent,

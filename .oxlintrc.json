@@ -1,0 +1,77 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "import",
+    "vitest",
+    "jsx-a11y",
+    "promise",
+    "node"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn",
+    "pedantic": "off",
+    "restriction": "off",
+    "style": "off",
+    "nursery": "off"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-await-in-loop": "off",
+    "no-shadow": "off",
+    "typescript/no-explicit-any": "warn",
+    "react/jsx-key": "warn",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/no-array-index-key": "off",
+    "react/jsx-no-constructed-context-values": "off",
+    "import/no-duplicates": "warn",
+    "import/no-self-import": "error",
+    "import/no-unassigned-import": "off",
+    "promise/no-multiple-resolved": "error",
+    "promise/valid-params": "warn",
+    "promise/always-return": "off",
+    "jsx-a11y/alt-text": "warn",
+    "jsx-a11y/label-has-associated-control": "off",
+    "jsx-a11y/heading-has-content": "off",
+    "jsx-a11y/anchor-has-content": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-array-reverse": "off",
+    "node/no-process-env": "off"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/drizzle/**",
+    "**/routeTree.gen.ts",
+    "**/node_modules/**",
+    "coverage/**"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.test.{ts,tsx}", "**/test/**/*.{ts,tsx}"],
+      "env": {
+        "vitest": true
+      },
+      "rules": {
+        "vitest/consistent-test-it": "warn",
+        "vitest/no-disabled-tests": "warn",
+        "vitest/no-focused-tests": "warn",
+        "vitest/valid-title": "warn",
+        "vitest/require-mock-type-parameters": "off",
+        "vitest/require-to-throw-message": "off"
+      }
+    }
+  ]
+}
