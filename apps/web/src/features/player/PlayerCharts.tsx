@@ -24,6 +24,9 @@ const LOSS_COLOR = '#ef4444'
 const GPM_COLOR = '#10b981'
 const XPM_COLOR = '#38bdf8'
 const IMP_COLOR = '#a78bfa'
+const KDA_REFERENCE_COLOR = '#94a3b8'
+const KDA_DISPLAY_CAP = 10
+const KDA_BASELINE_FLOOR = 2
 
 interface Row {
   index: number
@@ -36,8 +39,8 @@ interface Row {
   deaths: number
   assists: number
   kda: number
-  kdaGood: number | null
-  kdaBad: number | null
+  kdaDisplay: number
+  aboveAverage: boolean
 }
 
 export function kdaRatio(kills: number, deaths: number, assists: number): number {
@@ -45,7 +48,30 @@ export function kdaRatio(kills: number, deaths: number, assists: number): number
   return (kills + assists) / deaths
 }
 
-function KdaTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: Row }> }) {
+export function capKda(kda: number): number {
+  return Math.min(kda, KDA_DISPLAY_CAP)
+}
+
+export function kdaBaselineValue(values: number[]): number {
+  if (!values.length) return KDA_BASELINE_FLOOR
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length
+  return Math.max(average, KDA_BASELINE_FLOOR)
+}
+
+function KdaDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: Row }) {
+  if (cx == null || cy == null) return null
+  return <circle cx={cx} cy={cy} r={2.5} fill={payload?.aboveAverage ? WIN_COLOR : LOSS_COLOR} />
+}
+
+function KdaTooltip({
+  active,
+  payload,
+  baseline,
+}: {
+  active?: boolean
+  payload?: Array<{ payload: Row }>
+  baseline: number
+}) {
   if (!active || !payload?.length) return null
   const r = payload[0]?.payload
   if (!r) return null
@@ -54,7 +80,9 @@ function KdaTooltip({ active, payload }: { active?: boolean; payload?: Array<{ p
       <p className='font-medium'>
         第 {r.index} 场 · KDA {r.kills}/{r.deaths}/{r.assists}
       </p>
-      <p className='mt-0.5 text-muted-foreground'>比率 {r.kda.toFixed(1)}</p>
+      <p className='mt-0.5 text-muted-foreground'>
+        比率 {r.kda.toFixed(1)} · {r.aboveAverage ? '高于' : '低于'}平均 {baseline.toFixed(1)}
+      </p>
     </div>
   )
 }
@@ -63,12 +91,16 @@ export function PlayerCharts({ items }: { items: MatchListItem[] }) {
   if (items.length < 2) return null
 
   const ordered = [...items].reverse()
+  const rawKdaValues = ordered.map((m) => kdaRatio(m.kills ?? 0, m.deaths ?? 0, m.assists ?? 0))
+  const kdaDisplayValues = rawKdaValues.map(capKda)
+  const kdaBaseline = kdaBaselineValue(kdaDisplayValues)
   let wins = 0
   const rows: Row[] = ordered.map((m, i) => {
     const result = m.isVictory == null ? 0 : m.isVictory ? 1 : -1
     if (result === 1) wins++
     const decided = ordered.slice(0, i + 1).filter((x) => x.isVictory != null).length
-    const kda = kdaRatio(m.kills ?? 0, m.deaths ?? 0, m.assists ?? 0)
+    const kda = rawKdaValues[i] ?? 0
+    const kdaDisplay = kdaDisplayValues[i] ?? 0
     return {
       index: i + 1,
       result,
@@ -80,14 +112,15 @@ export function PlayerCharts({ items }: { items: MatchListItem[] }) {
       deaths: m.deaths ?? 0,
       assists: m.assists ?? 0,
       kda,
-      kdaGood: kda >= 1 ? kda : null,
-      kdaBad: kda < 1 ? kda : null,
+      kdaDisplay,
+      aboveAverage: kdaDisplay >= kdaBaseline,
     }
   })
 
   const decidedCount = ordered.filter((m) => m.isVictory != null).length
   const totalWins = ordered.filter((m) => m.isVictory === true).length
   const winRate = decidedCount ? Math.round((totalWins / decidedCount) * 100) : 0
+  const maxKda = Math.max(kdaBaseline, ...rows.map((r) => r.kdaDisplay))
 
   return (
     <div className='grid gap-4 sm:grid-cols-2'>
@@ -163,7 +196,7 @@ export function PlayerCharts({ items }: { items: MatchListItem[] }) {
         </CardHeader>
         <CardContent>
           <ChartContainer
-            config={{ kda: { label: 'KDA 比率', color: WIN_COLOR } }}
+            config={{ kda: { label: 'KDA 比率', color: KDA_REFERENCE_COLOR } }}
             className='h-36 w-full'
           >
             <LineChart data={rows} margin={{ top: 4, right: 4 }}>
@@ -175,22 +208,25 @@ export function PlayerCharts({ items }: { items: MatchListItem[] }) {
                 tickMargin={6}
                 tick={{ fontSize: 11 }}
               />
-              <YAxis hide domain={[0, 'dataMax + 1']} />
-              <ReferenceLine y={1} stroke='#888' strokeDasharray='3 3' />
-              <ChartTooltip content={<KdaTooltip />} />
-              <Line
-                type='monotone'
-                dataKey='kdaGood'
-                stroke={WIN_COLOR}
-                strokeWidth={2}
-                dot={{ r: 2.5, fill: WIN_COLOR }}
+              <YAxis hide domain={[0, Math.ceil(maxKda + 0.5)]} />
+              <ReferenceLine
+                y={kdaBaseline}
+                stroke={KDA_REFERENCE_COLOR}
+                strokeDasharray='4 4'
+                label={{
+                  value: `均值 ${kdaBaseline.toFixed(1)}`,
+                  position: 'insideTopRight',
+                  fontSize: 10,
+                  fill: KDA_REFERENCE_COLOR,
+                }}
               />
+              <ChartTooltip content={<KdaTooltip baseline={kdaBaseline} />} />
               <Line
                 type='monotone'
-                dataKey='kdaBad'
-                stroke={LOSS_COLOR}
+                dataKey='kdaDisplay'
+                stroke={KDA_REFERENCE_COLOR}
                 strokeWidth={2}
-                dot={{ r: 2.5, fill: LOSS_COLOR }}
+                dot={<KdaDot />}
               />
             </LineChart>
           </ChartContainer>

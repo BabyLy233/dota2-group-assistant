@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { MatchListItem } from '@dota/shared'
-import { PlayerCharts, kdaRatio } from './PlayerCharts'
+import { PlayerCharts, capKda, kdaBaselineValue, kdaRatio } from './PlayerCharts'
 
 function fakeItems(n: number): MatchListItem[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -66,5 +66,17 @@ describe('kdaRatio', () => {
   it('returns kills + assists when deaths is zero', () => {
     expect(kdaRatio(5, 0, 8)).toBe(13)
     expect(kdaRatio(2, 0, 0)).toBe(2)
+  })
+})
+
+describe('KDA chart helpers', () => {
+  it('caps extreme zero-death values for chart display', () => {
+    expect(capKda(kdaRatio(5, 0, 8))).toBe(10)
+    expect(capKda(kdaRatio(1, 6, 0))).toBeCloseTo(0.1667, 3)
+  })
+
+  it('uses a data-driven baseline with a floor for poor recent performance', () => {
+    expect(kdaBaselineValue([1.25, 1.5])).toBe(2)
+    expect(kdaBaselineValue([3, 5])).toBe(4)
   })
 })
