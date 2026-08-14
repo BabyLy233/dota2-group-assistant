@@ -96,7 +96,11 @@ export interface PlayerListResponse {
 }
 
 export async function listPlayers(db: Db, limit: number): Promise<PlayerListResponse> {
-  const rows = await db.select().from(players).orderBy(desc(players.updatedAt)).limit(limit)
+  const rows = await db
+    .select()
+    .from(players)
+    .orderBy(desc(players.favorite), desc(players.updatedAt))
+    .limit(limit)
 
   return {
     items: rows.map((row) => ({
