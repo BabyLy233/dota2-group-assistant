@@ -25,6 +25,17 @@ function AboutPage() {
             <li>智能分析：完整战报与 QQ 群简报，支持自定义 AI 接口，结果本地缓存</li>
             <li>收藏玩家快速访问，主题与分页自定义</li>
           </ul>
+          <p className='pt-2'>
+            项目开源地址：
+            <a
+              href='https://github.com/BabyLy233/dota2-group-assistant'
+              target='_blank'
+              rel='noreferrer'
+              className='ml-1 text-primary underline underline-offset-2'
+            >
+              github.com/BabyLy233/dota2-group-assistant
+            </a>
+          </p>
         </CardContent>
       </Card>
 

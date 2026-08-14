@@ -44,6 +44,14 @@ function RootLayout() {
         <div className='mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-muted-foreground'>
           <span>Dota 2 战报工具 · 数据来源 STRATZ API</span>
           <div className='flex items-center gap-4'>
+            <a
+              href='https://github.com/BabyLy233/dota2-group-assistant'
+              target='_blank'
+              rel='noreferrer'
+              className='transition hover:text-foreground'
+            >
+              GitHub
+            </a>
             <Link to='/about' className='transition hover:text-foreground'>
               关于本站
             </Link>
