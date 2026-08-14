@@ -1,7 +1,12 @@
 import type { MatchListItem } from '@dota/shared'
-import { useConstants } from '@/lib/use-constants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
 import {
   Bar,
   BarChart,
@@ -144,6 +149,7 @@ export function PlayerCharts({ items }: { items: MatchListItem[] }) {
               />
               <YAxis hide domain={['dataMin - 50', 'dataMax + 50']} />
               <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} />
               <Line type='monotone' dataKey='gpm' stroke={GPM_COLOR} strokeWidth={2} dot={false} />
               <Line type='monotone' dataKey='xpm' stroke={XPM_COLOR} strokeWidth={2} dot={false} />
             </LineChart>
