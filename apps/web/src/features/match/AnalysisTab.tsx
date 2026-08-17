@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { MatchDetail } from '@dota/shared'
 import { loadAiSettings } from '@/lib/ai-settings'
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/card'
 import { CopyButton } from '@/components/CopyButton'
 import { MarkdownView } from '@/components/MarkdownView'
+import { apiPost } from '@/lib/api'
 import { useStreamAnalyze, ANALYSIS_TTL_MS } from './use-stream-analyze'
 
 export function AnalysisTab({ match }: { match: MatchDetail }) {
@@ -24,6 +26,23 @@ export function AnalysisTab({ match }: { match: MatchDetail }) {
   const briefStreaming = stream.streaming && stream.currentType === 'brief'
   const fullStreaming = stream.streaming && stream.currentType === 'full'
   const inProgressError = stream.errorCode === 'analysis_in_progress'
+  const [qqSending, setQqSending] = useState(false)
+  const [qqError, setQqError] = useState<string | null>(null)
+  const [qqSent, setQqSent] = useState(false)
+
+  async function sendToQq() {
+    setQqSending(true)
+    setQqError(null)
+    setQqSent(false)
+    try {
+      await apiPost(`/api/matches/${match.matchId}/send-to-qq`)
+      setQqSent(true)
+    } catch (err) {
+      setQqError(err instanceof Error ? err.message : '发送失败')
+    } finally {
+      setQqSending(false)
+    }
+  }
 
   const briefStuck =
     match.analysisBriefStatus === 'PROCESSING' &&
@@ -86,6 +105,9 @@ export function AnalysisTab({ match }: { match: MatchDetail }) {
             {brief ? (
               <div className='flex gap-2'>
                 <CopyButton text={brief.text} label='复制简报' />
+                <Button variant='outline' size='xs' disabled={qqSending} onClick={sendToQq}>
+                  {qqSending ? '发送中…' : qqSent ? '已发送' : '发送至QQ群'}
+                </Button>
                 <Button
                   variant='outline'
                   size='xs'
@@ -97,6 +119,9 @@ export function AnalysisTab({ match }: { match: MatchDetail }) {
               </div>
             ) : null}
           </CardAction>
+          {qqError ? (
+            <CardDescription className='text-xs text-destructive'>{qqError}</CardDescription>
+          ) : null}
           {brief && (
             <CardDescription className='text-xs'>
               模型：{brief.model} · 生成于 {formatFullDateTime(brief.createdAt)}

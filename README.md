@@ -42,6 +42,7 @@ pnpm install
 # 2. 配置环境变量
 cp apps/server/.env.example apps/server/.env
 # 编辑 apps/server/.env，填入 STRATZ_API_KEY（https://stratz.com 申请）
+# 如需发送 QQ 群战报，在 AstrBot WebUI 创建含 im scope 的 API Key，并填入 ASTRBOT_API_KEY
 
 # 3. 启动开发环境（自动清理占用端口）
 pnpm dev
@@ -54,6 +55,14 @@ pnpm dev
 
 - DeepSeek: `https://api.deepseek.com/v1` · `deepseek-chat`
 - Ollama 本地: `http://localhost:11434/v1` · `llama3.3`（密钥随意）
+
+### QQ 群战报发送
+
+后端通过 AstrBot HTTP API（`POST /api/v1/im/message`）发送简报至 QQ 群，配置项位于 `apps/server/.env`：
+
+- `ASTRBOT_API_URL`：AstrBot 地址，默认 `http://localhost:6185`
+- `ASTRBOT_API_KEY`：AstrBot WebUI 创建、且包含 `im` scope 的 API Key
+- `ASTRBOT_QQ_GROUP_UMO`：目标群 UMO，默认 `aiocqhttp_default:GroupMessage:685470084`
 
 ## 常用命令
 
