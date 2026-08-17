@@ -18,7 +18,7 @@ SYNC_COOLDOWN_SECONDS = 60
     "astrbot_plugin_dota2_group_assistant",
     "BabyLy233",
     "在 QQ 群中绑定和查询用户的 Dota 2 Steam 账号",
-    "1.2.0",
+    "1.3.1",
     "https://github.com/BabyLy233/dota2-group-assistant",
 )
 class Dota2GroupAssistant(Star):
@@ -34,6 +34,12 @@ class Dota2GroupAssistant(Star):
             10.0,
             float(config.get("sync_cooldown", SYNC_COOLDOWN_SECONDS) or 0),
         )
+        self.ai_config = {
+            "baseURL": str(config.get("ai_base_url", "") or "").strip(),
+            "apiKey": str(config.get("ai_api_key", "") or "").strip(),
+            "model": str(config.get("ai_model", "") or "").strip(),
+        }
+        self.ai_timeout = max(30.0, float(config.get("ai_timeout", 180) or 0))
         self.api = WebApiClient(api_base_url, request_timeout)
         self.commands = CommandGate(command_cooldown)
         self._last_sync_at: dict[str, float] = {}
@@ -211,6 +217,48 @@ class Dota2GroupAssistant(Star):
                 else str(exc)
             )
             yield event.plain_result(f"获取最近比赛失败：{message}")
+        finally:
+            self.commands.finish(lock)
+
+    @filter.platform_adapter_type(filter.PlatformAdapterType.QQOFFICIAL)
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    @filter.command("ai", alias={"简报", "战报"})
+    async def ai(self, event: AstrMessageEvent, match_id: str):
+        """发送指定对局的 QQ 群简报，没有缓存时先生成。"""
+        match_id = match_id.strip()
+        if not match_id.isdigit() or not 0 < int(match_id) <= 9_999_999_999:
+            yield event.plain_result("对局 ID 无效。用法：/ai <对局ID>")
+            return
+        if not all(self.ai_config.values()):
+            yield event.plain_result(
+                "尚未配置 AI。请在插件配置中填写 ai_base_url、ai_api_key 和 ai_model。"
+            )
+            return
+
+        user_id = self._user_id(event)
+        lock, rejection = await self.commands.begin(user_id, "ai")
+        if rejection:
+            yield event.plain_result(rejection)
+            return
+
+        try:
+            yield event.plain_result("正在检查简报缓存并生成比赛简报，请稍候……")
+            text = await self.api.stream_brief(
+                int(match_id),
+                self.ai_config,
+                self.ai_timeout,
+            )
+            yield event.plain_result(f"比赛 {match_id} QQ 群简报\n{text}")
+        except BackendRequestError as exc:
+            if exc.status == 404:
+                message = "未找到该比赛。"
+            elif exc.status == 409:
+                message = "该比赛尚未解析完成，或正在生成简报，请稍后再试。"
+            elif exc.status == 502:
+                message = f"AI 服务生成失败：{exc}"
+            else:
+                message = str(exc)
+            yield event.plain_result(f"获取比赛简报失败：{message}")
         finally:
             self.commands.finish(lock)
 

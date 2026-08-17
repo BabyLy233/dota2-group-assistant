@@ -19,5 +19,29 @@
     "description": "同一用户重复同步的冷却时间（秒）",
     "type": "int",
     "default": 60
+  },
+  "ai_base_url": {
+    "description": "AI API 地址",
+    "type": "string",
+    "default": "",
+    "hint": "例如 https://api.deepseek.com/v1，必须是 OpenAI 兼容接口。"
+  },
+  "ai_api_key": {
+    "description": "AI API Key",
+    "type": "string",
+    "default": "",
+    "hint": "用于生成 QQ 群简报的模型 API Key。"
+  },
+  "ai_model": {
+    "description": "AI 模型名称",
+    "type": "string",
+    "default": "",
+    "hint": "例如 deepseek-chat。"
+  },
+  "ai_timeout": {
+    "description": "AI 简报请求超时时间（秒）",
+    "type": "int",
+    "default": 180,
+    "hint": "AI 生成简报可能需要较长时间，建议不要低于 60 秒。"
   }
 }
