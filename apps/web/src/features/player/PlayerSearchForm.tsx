@@ -33,7 +33,7 @@ export function PlayerSearchForm() {
           setSteamId(e.target.value)
           if (error) setError('')
         }}
-        placeholder='76561198xxxxxxxxx'
+        placeholder='输入 Steam64 ID（17 位数字）'
         className='h-10 flex-1'
         aria-invalid={error ? true : undefined}
       />
