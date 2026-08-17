@@ -42,6 +42,7 @@ pnpm install
 # 2. 配置环境变量
 cp apps/server/.env.example apps/server/.env
 # 编辑 apps/server/.env，填入 STRATZ_API_KEY（https://stratz.com 申请）
+# 如果服务器直连 STRATZ 返回 403，可选配置 STRATZ_PROXY_URL 指向可用的代理出口
 # 如需发送 QQ 群战报，在 AstrBot WebUI 创建含 im scope 的 API Key，并填入 ASTRBOT_API_KEY
 
 # 3. 启动开发环境（自动清理占用端口）

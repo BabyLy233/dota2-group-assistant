@@ -9,5 +9,15 @@
     "description": "Web API 请求超时时间（秒）",
     "type": "int",
     "default": 10
+  },
+  "command_cooldown": {
+    "description": "同一用户相同指令的冷却时间（秒）",
+    "type": "int",
+    "default": 30
+  },
+  "sync_cooldown": {
+    "description": "同一用户重复同步的冷却时间（秒）",
+    "type": "int",
+    "default": 60
   }
 }

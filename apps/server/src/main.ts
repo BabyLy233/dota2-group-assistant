@@ -25,7 +25,11 @@ type AppEnv = {
 
 function createApp(env: Env, logger: AppLogger) {
   const db = createDb(env.DATABASE_PATH)
-  const stratz = new StratzClient({ apiKey: env.STRATZ_API_KEY, logger })
+  const stratz = new StratzClient({
+    apiKey: env.STRATZ_API_KEY,
+    proxyUrl: env.STRATZ_PROXY_URL,
+    logger,
+  })
 
   const app = new Hono<AppEnv>()
 

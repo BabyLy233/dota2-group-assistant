@@ -259,8 +259,18 @@ export class StratzRateLimitError extends Error {
   }
 }
 
+export class StratzCloudflareError extends Error {
+  constructor() {
+    super(
+      'STRATZ API 请求被 Cloudflare 拦截（HTTP 403）。请更换服务器出口 IP，或配置可用的 STRATZ_PROXY_URL；本次请求不会自动重试。',
+    )
+    this.name = 'StratzCloudflareError'
+  }
+}
+
 export interface StratzClientOptions {
   apiKey?: string
+  proxyUrl?: string
   logger?: AppLogger
   maxRetries?: number
   retryDelayMs?: number
@@ -289,6 +299,7 @@ export interface StratzQuota {
 export class StratzClient {
   private readonly endpoint = STRATZ_ENDPOINT
   private readonly apiKey?: string
+  private readonly proxyUrl?: string
   private readonly logger?: AppLogger
   private readonly maxRetries: number
   private readonly retryDelayMs: number
@@ -302,6 +313,7 @@ export class StratzClient {
 
   constructor(options: StratzClientOptions) {
     this.apiKey = options.apiKey
+    this.proxyUrl = options.proxyUrl
     this.logger = options.logger
     this.maxRetries = options.maxRetries ?? 3
     this.retryDelayMs = options.retryDelayMs ?? 1000
@@ -422,11 +434,10 @@ export class StratzClient {
         }
 
         if (res.status < 200 || res.status >= 300) {
-          throw new Error(
-            `STRATZ API HTTP error: ${res.status}${
-              res.status === 403 ? ' (blocked by Cloudflare)' : ''
-            }`,
-          )
+          if (res.status === 403) {
+            throw new StratzCloudflareError()
+          }
+          throw new Error(`STRATZ API HTTP error: ${res.status}`)
         }
 
         const body = JSON.parse(res.text) as {
@@ -455,7 +466,11 @@ export class StratzClient {
         )
         return body.data as T
       } catch (err) {
-        if (err instanceof StratzApiError || err instanceof StratzRateLimitError) {
+        if (
+          err instanceof StratzApiError ||
+          err instanceof StratzRateLimitError ||
+          err instanceof StratzCloudflareError
+        ) {
           throw err
         }
         if (attempt >= this.maxRetries) {
@@ -515,6 +530,7 @@ export class StratzClient {
       '-H',
       `user-agent: ${STRATZ_USER_AGENT}`,
       ...(this.apiKey ? ['-H', `authorization: Bearer ${this.apiKey}`] : []),
+      ...(this.proxyUrl ? ['--proxy', this.proxyUrl] : []),
       '--data',
       bodyText,
     ]

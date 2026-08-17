@@ -9,6 +9,8 @@
 - `/bind <Steam64 ID 或短 ID>`：绑定账号，也可以使用 `/steam_bind` 或 `/绑定`。
 - `/steam`：查询当前用户的绑定，也可以使用 `/我的steam` 或 `/steam查询`。
 - `/unbind`：解除绑定，也可以使用 `/解绑`。
+- `/sync`：同步当前绑定账号的比赛数据，也可以使用 `/同步`。
+- `/recent`：同步后发送最近 5 场比赛，也可以使用 `/最近`。
 
 例如：
 
@@ -18,3 +20,9 @@
 ```
 
 短 ID 会按照 Steam account ID 转换为对应的 Steam64 ID。插件仅处理 `qq_official` 的群聊消息。
+
+`/sync` 和 `/recent` 会限制同一用户的重复请求。默认相同指令冷却 30 秒，重复同步冷却 60 秒；`/recent` 在近期已经同步过时会跳过重复的 STRATZ 同步请求，只读取数据库中的最近比赛。
+
+英雄中文名称使用插件内置的 `hero_names_zh.json` 映射，不会为了显示英雄名称额外请求 STRATZ。
+
+插件代码按职责拆分为 `main.py`（指令入口）、`api_client.py`（Web API）、`command_gate.py`（请求限制）、`steam.py`（Steam ID 转换）和 `match_formatter.py`（比赛消息格式化）。
