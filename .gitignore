@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 coverage/
+/astrbot_plugin_dota2_group_assistant.zip
 
 # Environment & secrets
 .env

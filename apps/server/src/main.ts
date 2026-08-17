@@ -12,6 +12,7 @@ import { constantsRoutes } from './modules/constants/constants.routes'
 import { aiRoutes } from './modules/ai/ai.routes'
 import { stratzRoutes } from './modules/stratz/stratz.routes'
 import { StratzClient } from './modules/stratz'
+import { bindingRoutes } from './modules/binding/binding.routes'
 
 type AppVariables = {
   requestId: string
@@ -80,6 +81,7 @@ function createApp(env: Env, logger: AppLogger) {
   })
 
   app.route('/api/players', playerRoutes({ db, env, stratz, logger }))
+  app.route('/api/bindings', bindingRoutes({ db }))
   app.route('/api/matches', matchRoutes({ db, env, stratz, logger }))
   app.route('/api/constants', constantsRoutes({ stratz, logger }))
   app.route('/api/ai', aiRoutes({ db, stratz, logger }))

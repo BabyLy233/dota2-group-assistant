@@ -70,6 +70,7 @@ pnpm dev
 | ------------------------------- | ------------------------------------------------- |
 | `pnpm dev`                      | 启动前后端开发服务（自动清理 3000/5173 端口占用） |
 | `pnpm build`                    | 构建所有包                                        |
+| `pnpm plugin:pack`              | 将 AstrBot 插件打包为可导入的 ZIP 文件            |
 | `pnpm test` / `pnpm test:watch` | 运行 Vitest 测试                                  |
 | `pnpm typecheck`                | 全量类型检查                                      |
 | `pnpm lint`                     | oxlint 检查                                       |

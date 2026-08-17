@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { integer, sqliteTable, text, primaryKey, index } from 'drizzle-orm/sqlite-core'
+import { integer, sqliteTable, text, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { MATCH_STATUSES } from '@dota/shared'
 
 export const players = sqliteTable('players', {
@@ -16,6 +16,28 @@ export const players = sqliteTable('players', {
     .notNull()
     .default(sql`(unixepoch())`),
 })
+
+export const playerBindings = sqliteTable(
+  'player_bindings',
+  {
+    platform: text('platform').notNull(),
+    userId: text('user_id').notNull(),
+    steamAccountId: integer('steam_account_id')
+      .notNull()
+      .references(() => players.steamAccountId, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    primaryKey({ columns: [t.platform, t.userId] }),
+    uniqueIndex('player_bindings_steam_unique').on(t.steamAccountId),
+    index('player_bindings_user_idx').on(t.userId),
+  ],
+)
 
 export const matches = sqliteTable('matches', {
   matchId: integer('match_id').primaryKey(),

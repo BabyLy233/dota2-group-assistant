@@ -1,0 +1,13 @@
+{
+  "api_base_url": {
+    "description": "Dota 2 助手 Web API 地址",
+    "type": "string",
+    "default": "http://127.0.0.1:3000/api",
+    "hint": "填写 Web 应用后端地址，不要包含末尾斜杠。"
+  },
+  "request_timeout": {
+    "description": "Web API 请求超时时间（秒）",
+    "type": "int",
+    "default": 10
+  }
+}

@@ -6,6 +6,7 @@
     "dev:server": "node scripts/clean-ports.mjs && pnpm --filter @dota/server dev",
     "dev:web": "node scripts/clean-ports.mjs && pnpm --filter @dota/web dev",
     "build": "pnpm -r build",
+    "plugin:pack": "node scripts/package-astrbot-plugin.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r typecheck",
