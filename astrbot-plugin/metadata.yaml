@@ -1,7 +1,7 @@
 name: astrbot_plugin_dota2_group_assistant
 display_name: Dota 2 群助手
 desc: 在 QQ 群中绑定和查询用户的 Dota 2 Steam 账号。
-version: v1.3.1
+version: v1.4.0
 author: BabyLy233
 repo: https://github.com/BabyLy233/dota2-group-assistant
 astrbot_version: ">=4.9.2"

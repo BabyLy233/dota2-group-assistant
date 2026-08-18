@@ -8,6 +8,7 @@ from astrbot.api.star import Context, Star, register
 from .api_client import BackendRequestError, WebApiClient
 from .command_gate import CommandGate
 from .match_formatter import format_recent_matches, load_hero_names
+from .match_detail_formatter import format_match_detail
 from .steam import normalize_steam_id
 
 COMMAND_COOLDOWN_SECONDS = 30
@@ -259,6 +260,34 @@ class Dota2GroupAssistant(Star):
             else:
                 message = str(exc)
             yield event.plain_result(f"获取比赛简报失败：{message}")
+        finally:
+            self.commands.finish(lock)
+
+    @filter.platform_adapter_type(filter.PlatformAdapterType.QQOFFICIAL)
+    @filter.event_message_type(filter.EventMessageType.GROUP_MESSAGE)
+    @filter.command("match", alias={"比赛"})
+    async def match(self, event: AstrMessageEvent, match_id: str):
+        """发送指定比赛的 Markdown 数据表格。"""
+        match_id = match_id.strip()
+        if not match_id.isdigit() or not 0 < int(match_id) <= 9_999_999_999:
+            yield event.plain_result("比赛 ID 无效。用法：/match <比赛ID>")
+            return
+
+        user_id = self._user_id(event)
+        lock, rejection = await self.commands.begin(user_id, "match")
+        if rejection:
+            yield event.plain_result(rejection)
+            return
+
+        try:
+            detail = await self.api.request("GET", f"/matches/{int(match_id)}")
+            yield event.plain_result(format_match_detail(detail, self._hero_names))
+        except BackendRequestError as exc:
+            if exc.status == 404:
+                message = "未找到该比赛，请先在 Web 应用中同步比赛数据。"
+            else:
+                message = str(exc)
+            yield event.plain_result(f"获取比赛数据失败：{message}")
         finally:
             self.commands.finish(lock)
 
